@@ -6,13 +6,22 @@
 #include <LiquidCrystal_I2C.h>
 #include <SPI.h>
 
+// TODO: add flag de tipo de conteúdo?
+// TODO: ajustar struct de dados
+// TODO: ver como passar uma string?
+// TODO: adicionar codigo do giroscópio e completar lógica da aplicação
+
+// inclui biblioteca personalizada
+#include <SPI_Send_Receive.h>
+
 //Endereco I2C do MPU6050
 const int MPU = 0x68;
 //Variaveis para armazenar valores dos sensores
 int AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
 
 //flags de controle
-bool SCAN_LCD = true;
+bool SCAN_LCD = false;
+bool SEND_MSG = true;
 
 // scan do endereço do LCD
 void findLCDAddress();
@@ -22,12 +31,22 @@ void getCoordinates();
 void masterSPI();
 
 // instanciar LCD
-LiquidCrystal_I2C lcd(0x38, 16, 2);
+LiquidCrystal_I2C lcd(0x20, 16, 2);
+
+// criar estrutura de transferência de dados por SPI
+struct DataWrapper
+{
+  char *mensagem;
+  float numberData;
+  bool isFilled;
+};
+
+DataWrapper structTest;
 
 void setup()
 {
   Serial.begin(9600);
-
+  Serial.println("Setting up master");
   Wire.begin();
   Wire.beginTransmission(MPU);
   Wire.write(0x6B);
@@ -56,27 +75,34 @@ void loop()
   {
     findLCDAddress();
   }
-  getCoordinates();
+  // getCoordinates();
 
-  lcd.clear();
-  lcd.print("T=");
-  lcd.print(Tmp);
-  lcd.setCursor(0, 1);
+  // lcd.clear();
+  // lcd.print("T=");
+  // lcd.print(Tmp);
+  // lcd.setCursor(0, 1);
 
-  masterSPI();
+  if (!structTest.isFilled)
+  {
+    structTest.isFilled = true;
+    structTest.mensagem = "teste";
+    structTest.numberData = 90.56;
+  }
+  if (SEND_MSG)
+  {
+    masterSPI();
+  }
 }
 
 void masterSPI()
 {
-  byte masterSend, masterReceive;
   digitalWrite(SS, LOW); //Starts communication with Slave connected to master
-
-  masterSend = 2;
-  masterReceive = SPI.transfer(masterSend);
-
-  Serial.println("Received data: " + masterReceive);
-
-  delay(3000);
+  Serial.println("Master sending");
+  Serial.println("struct");
+  int bytes = SPI_write(structTest);
+  Serial.println("nro de bytes");
+  Serial.println(bytes);
+  SEND_MSG = false;
 }
 
 void getCoordinates()
@@ -170,6 +196,6 @@ void findLCDAddress()
     SCAN_LCD = false;
     Serial.println("done\n");
   }
-
-  delay(5000); // wait 5 seconds for next scan
+  if (SCAN_LCD)
+    delay(5000); // wait 5 seconds for next scan
 }
