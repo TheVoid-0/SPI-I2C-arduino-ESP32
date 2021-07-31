@@ -3,7 +3,7 @@ unsigned int SPI_write(const T &value)
 {
   const byte *p = (const byte *)&value;
   unsigned int i;
-  for (i = 0; i < sizeof value; i++)
+  for (i = 0; i < sizeof (value); i++)
   {
     SPI.transfer(*p++);
   }
@@ -21,18 +21,14 @@ unsigned int SPI_write(const T &value)
 //   }  // end of SPI_readAnything_ISR
 
 template <typename T>
-unsigned int SPI_read(T &output, byte firstByte)
+unsigned int SPI_read(T &output)
 {
   byte *p = (byte *)&output; // cast qualquer valor para um ponteiro do tipo byte
-  unsigned int i = 0;
+  unsigned int i;
 
-  if (firstByte)
-  {
-    *p++ = firstByte;
-    i = 1;
-  }
+  //*p++ = firstByte;
 
-  for (; i < sizeof output; i++)
+  for (i = 0; i < sizeof(output); i++)
   {
     *p++ = SPI.transfer(0);
   }
