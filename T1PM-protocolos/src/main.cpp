@@ -21,7 +21,8 @@ int AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
 
 //flags de controle
 bool SCAN_LCD = false;
-bool SEND_MSG = true;
+bool SEND_MSG = false;
+bool IS_MISO = false;
 
 // scan do endereço do LCD
 void findLCDAddress();
@@ -31,30 +32,34 @@ void getCoordinates();
 void masterSPI();
 
 // instanciar LCD
-LiquidCrystal_I2C lcd(0x20, 16, 2);
+LiquidCrystal_I2C lcd(0x38, 16, 2);
 
 // criar estrutura de transferência de dados por SPI
-struct DataWrapper
+struct GyroAccelData
 {
-  char *mensagem;
-  float numberData;
-  bool isFilled;
+  char tipo = 'T';
+  int acelerometroX, acelerometroY, acelerometroZ;
+  int temperatura;
+  int giroscopioX, giroscopioY, giroscopioZ;
 };
 
-DataWrapper structTest;
+GyroAccelData gyroAccelData;
+
+bool received = false;
+int bytes = 0;
+int interruptions = 0;
 
 void setup()
 {
-  Serial.begin(9600);
-  Serial.println("Setting up master");
-  Wire.begin();
-  Wire.beginTransmission(MPU);
-  Wire.write(0x6B);
 
   Serial.begin(9600);
   while (!Serial)
     ; // Leonardo: wait for serial monitor
-  Serial.println("\nI2C Scanner");
+
+  Serial.println("Setting up master");
+  Wire.begin();
+  Wire.beginTransmission(MPU);
+  Wire.write(0x6B);
 
   //Inicializa o MPU-6050
   Wire.write(0);
@@ -63,10 +68,28 @@ void setup()
   lcd.init();      // Inicializando o LCD
   lcd.backlight(); // Ligando o BackLight do LCD
 
-  // inicializa o SPI para comunicação mestre-escravo -mestre
-  SPI.begin();                         //Begins the SPI commnuication
-  SPI.setClockDivider(SPI_CLOCK_DIV8); //Sets clock for SPI communication at 8 (16/8=2Mhz)
-  digitalWrite(SS, HIGH);              // Setting SlaveSelect as HIGH (So master doesnt connnect with slave)
+  if (IS_MISO)
+  {
+    // inicializa o SPI para comunicação mestre-escravo -mestre
+    SPI.begin();                         //Begins the SPI commnuication
+    SPI.setClockDivider(SPI_CLOCK_DIV8); //Sets clock for SPI communication at 8 (16/8=2Mhz)
+    digitalWrite(SS, HIGH);              // Setting SlaveSelect as HIGH (So master doesnt connnect with slave)
+  }
+  else
+  {
+    Serial.println("MISO off");
+    pinMode(MOSI, OUTPUT);
+    SPCR |= _BV(SPE);
+    SPCR |= _BV(SPIE);
+    SPI.attachInterrupt(); //Interuupt ON is set for SPI commnucation
+  }
+}
+
+ISR(SPI_STC_vect) //Inerrrput routine function
+{
+  interruptions++;
+  bytes = SPI_read(gyroAccelData);
+  received = true;
 }
 
 void loop()
@@ -75,34 +98,38 @@ void loop()
   {
     findLCDAddress();
   }
-  // getCoordinates();
 
-  // lcd.clear();
-  // lcd.print("T=");
-  // lcd.print(Tmp);
-  // lcd.setCursor(0, 1);
-
-  if (!structTest.isFilled)
-  {
-    structTest.isFilled = true;
-    structTest.mensagem = "teste";
-    structTest.numberData = 90.56;
-  }
-  if (SEND_MSG)
-  {
-    masterSPI();
-  }
+  masterSPI();
 }
 
 void masterSPI()
 {
-  digitalWrite(SS, LOW); //Starts communication with Slave connected to master
-  Serial.println("Master sending");
-  Serial.println("struct");
-  int bytes = SPI_write(structTest);
-  Serial.println("nro de bytes");
-  Serial.println(bytes);
-  SEND_MSG = false;
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("MASTER");
+  if (SEND_MSG)
+  {
+    digitalWrite(SS, LOW); //Starts communication with Slave connected to master
+    Serial.println("Master sending");
+    Serial.println("struct");
+    int bytes = SPI_write(gyroAccelData);
+    Serial.println("nro de bytes");
+    Serial.println(bytes);
+    SEND_MSG = false;
+  }
+
+  if (received)
+  {
+    Serial.println("Recebido: bytes:");
+    Serial.println(bytes);
+    Serial.println("Recebido: temperatura");
+    Serial.println(gyroAccelData.temperatura);
+    Serial.print("interruptions: ");
+    Serial.println(interruptions);
+    lcd.print("Recebeu");
+    lcd.print(gyroAccelData.temperatura);
+    received = false;
+  }
 }
 
 void getCoordinates()
@@ -195,6 +222,10 @@ void findLCDAddress()
   {
     SCAN_LCD = false;
     Serial.println("done\n");
+  }
+  if (nDevices == 2)
+  {
+    SCAN_LCD = false;
   }
   if (SCAN_LCD)
     delay(5000); // wait 5 seconds for next scan
