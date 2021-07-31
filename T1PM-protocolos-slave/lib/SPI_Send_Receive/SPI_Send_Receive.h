@@ -3,7 +3,7 @@ unsigned int SPI_write(const T &value)
 {
   const byte *p = (const byte *)&value;
   unsigned int i;
-  for (i = 0; i < sizeof value; i++)
+  for (i = 0; i < sizeof (value); i++)
   {
     SPI.transfer(*p++);
   }
