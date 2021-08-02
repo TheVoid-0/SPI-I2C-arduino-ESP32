@@ -4,7 +4,7 @@
 #include <SPI.h>
 #include <SPI_Send_Receive.h>
 
-volatile boolean received;
+volatile boolean locked = false;
 volatile byte slaveReceived, slaveSend;
 
 LiquidCrystal_I2C lcd(0x20, 16, 2);
@@ -33,7 +33,6 @@ void slaveSPI()
   Serial.println(gyroAccelData.acelerometroY);
   Serial.println(gyroAccelData.acelerometroZ);
   Serial.println(gyroAccelData.temperatura);
-  received = false;
   Serial.println("interruptions:");
   Serial.println(interruptions);
 }
@@ -45,7 +44,6 @@ void setup()
 
   pinMode(MISO, OUTPUT); // have to send on master in, *slave out*
   SPCR |= _BV(SPE);      //Turn on SPI in Slave Mode
-  received = false;
 
   SPI.attachInterrupt(); //Interuupt ON is set for SPI commnucation
 
@@ -55,16 +53,18 @@ void setup()
 
 ISR(SPI_STC_vect) //Inerrrput routine function
 {
-  interruptions++;
-  SPI_read(gyroAccelData);
-  slaveSPI();
-  //received = true;
+  if (!locked)
+  {
+    locked = true;
+    interruptions++;
+    SPI_read(gyroAccelData);
+    slaveSPI();
+    locked = false;
+  }
 }
 
 void loop()
 {
-  if (received)
-  {
-    slaveSPI();
-  }
+  lcd.print("teste");
+  lcd.clear();
 }
