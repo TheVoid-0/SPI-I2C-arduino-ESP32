@@ -1,53 +1,41 @@
 
 #include <Arduino.h>
-//Carrega a biblioteca Wire
 
-#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <SPI.h>
 
-// TODO: add flag de tipo de conteúdo?
-// TODO: ajustar struct de dados
-// TODO: ver como passar uma string?
 // TODO: adicionar codigo do giroscópio e completar lógica da aplicação
 
 // inclui biblioteca personalizada
 #include <SPI_Send_Receive.h>
 
-//Endereco I2C do MPU6050
-const int MPU = 0x68;
-//Variaveis para armazenar valores dos sensores
-int AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
-
 //flags de controle
 bool SCAN_LCD = false;
-bool SEND_MSG = false;
-bool IS_MISO = false;
+bool IS_SLAVE = true;
 
-// scan do endereço do LCD
-void findLCDAddress();
-
-void getCoordinates();
-
+// functions
+void findLCDAddress(); // scan do endereço do LCD
 void masterSPI();
+void slaveSPI();
+void getMockData();
 
 // instanciar LCD
-LiquidCrystal_I2C lcd(0x38, 16, 2);
+LiquidCrystal_I2C lcd(0x20, 16, 2);
 
 // criar estrutura de transferência de dados por SPI
 struct GyroAccelData
 {
   char tipo = 'T';
-  int acelerometroX, acelerometroY, acelerometroZ;
-  int temperatura;
-  int giroscopioX, giroscopioY, giroscopioZ;
+  float acelerometroX, acelerometroY, acelerometroZ;
+  float temperatura;
+  float giroscopioX, giroscopioY, giroscopioZ;
 };
 
 GyroAccelData gyroAccelData;
 
-bool received = false;
-int bytes = 0;
-int interruptions = 0;
+volatile bool locked = false;
+volatile int bytes = 0;
+volatile int interruptions = 0;
 
 void setup()
 {
@@ -56,20 +44,14 @@ void setup()
   while (!Serial)
     ; // Leonardo: wait for serial monitor
 
-  Serial.println("Setting up master");
-  Wire.begin();
-  Wire.beginTransmission(MPU);
-  Wire.write(0x6B);
-
-  //Inicializa o MPU-6050
-  Wire.write(0);
-  Wire.endTransmission(true);
+  Serial.print("Setting up master  - acting as: ");
 
   lcd.init();      // Inicializando o LCD
   lcd.backlight(); // Ligando o BackLight do LCD
 
-  if (IS_MISO)
+  if (!IS_SLAVE)
   {
+    Serial.println("MASTER");
     // inicializa o SPI para comunicação mestre-escravo -mestre
     SPI.begin();                         //Begins the SPI commnuication
     SPI.setClockDivider(SPI_CLOCK_DIV8); //Sets clock for SPI communication at 8 (16/8=2Mhz)
@@ -77,7 +59,7 @@ void setup()
   }
   else
   {
-    Serial.println("MISO off");
+    Serial.println("SLAVE");
     pinMode(MOSI, OUTPUT);
     SPCR |= _BV(SPE);
     SPCR |= _BV(SPIE);
@@ -87,9 +69,14 @@ void setup()
 
 ISR(SPI_STC_vect) //Inerrrput routine function
 {
-  interruptions++;
-  bytes = SPI_read(gyroAccelData);
-  received = true;
+  if (!locked)
+  {
+    locked = true;
+    interruptions++;
+    bytes = SPI_read(gyroAccelData);
+    slaveSPI();
+    locked = false;
+  }
 }
 
 void loop()
@@ -99,87 +86,47 @@ void loop()
     findLCDAddress();
   }
 
-  masterSPI();
+  if (!IS_SLAVE)
+  {
+    getMockData();
+    masterSPI();
+  }
+}
+
+void slaveSPI()
+{
+  Serial.println("recebido:");
+  Serial.println(gyroAccelData.acelerometroX);
+  Serial.println(gyroAccelData.acelerometroY);
+  Serial.println(gyroAccelData.acelerometroZ);
+  Serial.println(gyroAccelData.temperatura);
+  Serial.println("interruptions:");
+  Serial.println(interruptions);
 }
 
 void masterSPI()
 {
   lcd.clear();
-  lcd.setCursor(0, 0);
   lcd.print("MASTER");
-  if (SEND_MSG)
-  {
-    digitalWrite(SS, LOW); //Starts communication with Slave connected to master
-    Serial.println("Master sending");
-    Serial.println("struct");
-    int bytes = SPI_write(gyroAccelData);
-    Serial.println("nro de bytes");
-    Serial.println(bytes);
-    SEND_MSG = false;
-  }
-
-  if (received)
-  {
-    Serial.println("Recebido: bytes:");
-    Serial.println(bytes);
-    Serial.println("Recebido: temperatura");
-    Serial.println(gyroAccelData.temperatura);
-    Serial.print("interruptions: ");
-    Serial.println(interruptions);
-    lcd.print("Recebeu");
-    lcd.print(gyroAccelData.temperatura);
-    received = false;
-  }
+  digitalWrite(SS, LOW); //Starts communication with Slave connected to master
+  Serial.println("Master sending");
+  Serial.println("struct");
+  int bytes = SPI_write(gyroAccelData);
+  Serial.println("nro de bytes");
+  Serial.println(bytes);
+  delay(1000);
 }
 
-void getCoordinates()
+void getMockData()
 {
-  Wire.beginTransmission(MPU);
-  Wire.write(0x3B); // starting with register 0x3B (ACCEL_XOUT_H)
-  Wire.endTransmission(false);
-  //Solicita os dados do sensor
-  Wire.requestFrom(MPU, 14, true);
-  //Armazena o valor dos sensores nas variaveis correspondentes
-  AcX = Wire.read() << 8 | Wire.read(); //0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
-  AcY = Wire.read() << 8 | Wire.read(); //0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
-  AcZ = Wire.read() << 8 | Wire.read(); //0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
-  Tmp = Wire.read() << 8 | Wire.read(); //0x41 (TEMP_OUT_H) & 0x42 (TEMP_OUT_L)
-  GyX = Wire.read() << 8 | Wire.read(); //0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
-  GyY = Wire.read() << 8 | Wire.read(); //0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
-  GyZ = Wire.read() << 8 | Wire.read(); //0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
-
-  //Envia valor X do acelerometro para a serial e o LCD
-  //Serial.print("AcX = ");
-  //Serial.print(AcX);
-
-  //Envia valor Y do acelerometro para a serial e o LCD
-  //Serial.print(" | AcY = ");
-  //Serial.print(AcY);
-
-  //Envia valor Z do acelerometro para a serial e o LCD
-  //Serial.print(" | AcZ = ");
-  //Serial.print(AcZ);
-
-  //Envia valor da temperatura para a serial e o LCD
-  //Calcula a temperatura em graus Celsius
-  //Serial.print(" | Tmp = ");
-  //Serial.print(Tmp / 340.00 + 36.53);
-  Tmp = Tmp / 340.00 + 36.53;
-
-  //Envia valor X do giroscopio para a serial e o LCD
-  //Serial.print(" | GyX = ");
-  //Serial.print(GyX);
-
-  //Envia valor Y do giroscopio para a serial e o LCD
-  //Serial.print(" | GyY = ");
-  //Serial.print(GyY);
-
-  //Envia valor Z do giroscopio para a serial e o LCD
-  //Serial.print(" | GyZ = ");
-  //Serial.println(GyZ);
-
-  //Aguarda 300 ms e reinicia o processo
-  delay(300);
+  gyroAccelData.acelerometroX = 1;
+  gyroAccelData.acelerometroY = 2;
+  gyroAccelData.acelerometroZ = 3;
+  gyroAccelData.temperatura = 4;
+  gyroAccelData.giroscopioX = 5;
+  gyroAccelData.giroscopioY = 6;
+  gyroAccelData.giroscopioZ = 7;
+  gyroAccelData.temperatura = 30.85;
 }
 
 void findLCDAddress()
