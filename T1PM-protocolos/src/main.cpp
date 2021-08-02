@@ -34,14 +34,16 @@ void masterSPI();
 LiquidCrystal_I2C lcd(0x20, 16, 2);
 
 // criar estrutura de transferência de dados por SPI
-struct DataWrapper
+struct GyroAccelData
 {
-  char *mensagem;
-  float numberData;
+  char tipo = 'T';
+  float acelerometroX, acelerometroY, acelerometroZ;
+  float temperatura;
+  float giroscopioX, giroscopioY, giroscopioZ;
   bool isFilled;
 };
 
-DataWrapper structTest;
+GyroAccelData gyroAccelData;
 
 void setup()
 {
@@ -82,16 +84,23 @@ void loop()
   // lcd.print(Tmp);
   // lcd.setCursor(0, 1);
 
-  if (!structTest.isFilled)
+  if (!gyroAccelData.isFilled)
   {
-    structTest.isFilled = true;
-    structTest.mensagem = "teste";
-    structTest.numberData = 90.56;
+    gyroAccelData.acelerometroX = 1;
+    gyroAccelData.acelerometroY = 2;
+    gyroAccelData.acelerometroZ = 3;
+    gyroAccelData.temperatura = 4;
+    gyroAccelData.giroscopioX = 5;
+    gyroAccelData.giroscopioY = 6;
+    gyroAccelData.giroscopioZ = 7;
+
+    gyroAccelData.temperatura = 36.53;
   }
   if (SEND_MSG)
   {
     masterSPI();
   }
+  delay(1000);
 }
 
 void masterSPI()
@@ -99,10 +108,10 @@ void masterSPI()
   digitalWrite(SS, LOW); //Starts communication with Slave connected to master
   Serial.println("Master sending");
   Serial.println("struct");
-  int bytes = SPI_write(structTest);
+  int bytes = SPI_write(gyroAccelData);
   Serial.println("nro de bytes");
   Serial.println(bytes);
-  SEND_MSG = false;
+  SEND_MSG = true;
 }
 
 void getCoordinates()

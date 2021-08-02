@@ -10,14 +10,17 @@ volatile byte slaveReceived, slaveSend;
 LiquidCrystal_I2C lcd(0x20, 16, 2);
 
 // criar estrutura de transferência de dados por SPI
-struct DataWrapper
+struct GyroAccelData
 {
-  char *mensagem;
-  float numberData;
+  char tipo = 'T';
+  float acelerometroX, acelerometroY, acelerometroZ;
+  float temperatura;
+  float giroscopioX, giroscopioY, giroscopioZ;
   bool isFilled;
 };
 
-DataWrapper structTest;
+GyroAccelData gyroAccelData;
+
 unsigned int offset = 0;
 float inteiro;
 
@@ -28,13 +31,13 @@ void slaveSPI()
   if (received)
   {
     Serial.println("recebido:");
-    Serial.println(structTest.mensagem);
-    Serial.println(structTest.numberData);
-    Serial.println(structTest.isFilled);
+    Serial.println(gyroAccelData.acelerometroX);
+    Serial.println(gyroAccelData.acelerometroY);
+    Serial.println(gyroAccelData.acelerometroZ);
+    Serial.println(gyroAccelData.temperatura);
     received = false;
     Serial.println("interruptions:");
     Serial.println(interruptions);
-    delay(1000);
   }
 }
 
@@ -44,7 +47,7 @@ void setup()
   Serial.println("Setting up slave");
 
   pinMode(MISO, OUTPUT); // have to send on master in, *slave out*
-  SPCR |= _BV(SPE); //Turn on SPI in Slave Mode
+  SPCR |= _BV(SPE);      //Turn on SPI in Slave Mode
   received = false;
 
   SPI.attachInterrupt(); //Interuupt ON is set for SPI commnucation
@@ -56,7 +59,7 @@ void setup()
 ISR(SPI_STC_vect) //Inerrrput routine function
 {
   interruptions++;
-  SPI_read(structTest);
+  SPI_read(gyroAccelData);
   received = true;
 }
 
