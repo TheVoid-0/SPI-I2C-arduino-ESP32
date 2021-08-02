@@ -28,17 +28,14 @@ unsigned int interruptions = 0;
 
 void slaveSPI()
 {
-  if (received)
-  {
-    Serial.println("recebido:");
-    Serial.println(gyroAccelData.acelerometroX);
-    Serial.println(gyroAccelData.acelerometroY);
-    Serial.println(gyroAccelData.acelerometroZ);
-    Serial.println(gyroAccelData.temperatura);
-    received = false;
-    Serial.println("interruptions:");
-    Serial.println(interruptions);
-  }
+  Serial.println("recebido:");
+  Serial.println(gyroAccelData.acelerometroX);
+  Serial.println(gyroAccelData.acelerometroY);
+  Serial.println(gyroAccelData.acelerometroZ);
+  Serial.println(gyroAccelData.temperatura);
+  received = false;
+  Serial.println("interruptions:");
+  Serial.println(interruptions);
 }
 
 void setup()
@@ -60,11 +57,14 @@ ISR(SPI_STC_vect) //Inerrrput routine function
 {
   interruptions++;
   SPI_read(gyroAccelData);
-  received = true;
+  slaveSPI();
+  //received = true;
 }
 
 void loop()
 {
-  lcd.print("teste");
-  slaveSPI();
+  if (received)
+  {
+    slaveSPI();
+  }
 }
