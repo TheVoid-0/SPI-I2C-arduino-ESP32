@@ -20,3 +20,20 @@ no Proteus é possível transferir Structs de vários bytes (testados até 30byt
 muitas vezes a interrupção não é disparada, e nos da a sensação de que o código "está lento" tendo em vista de que até prints na saída serial as vezes são deixados pela metade
 (sem completar a frase) e após retornar da interrupção o comportamento continua estranho
 <p/>
+
+<h4>HIPÓTESTE:</h4>
+<p>
+Nesse caso da interrupção temos dois problemas:
+<br>
+1° O tempo que o arduino Slave precisa pra processar tudo que precisa fazer em UMA interrupção antes do master ENVIAR algo de novo gerando OUTRA interrupção
+<br>
+2° O que o arduino Slave pode fazer enquanto NÃO estiver em uma interrupção, o ideal é não deixar consumir/alterar nada que ele também altere dentro na INTERRUPÇÃO
+<p/>
+
+<p>
+  <h5>POSSÍVEL SOLUÇÃO:</h5> Impedir/proteger/evitar acessar ou alterar recursos que também são utilizados e alterados em uma interrupção
+</p>
+
+<p>
+  <h5>POSSÍVEL SOLUÇÃO_2:</h5> Utilizar um semáforo para agendar/barrar acessos a um recurso e não permitir uma interrupção modificar algo que está em uso, provavelmente esse comportamento poderia ser melhor mitigado em um ambiente com uma esp32 e um sistema operacional em tempo real
+</p>
