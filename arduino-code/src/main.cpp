@@ -44,7 +44,7 @@ void setup()
   Serial.begin(9600);
   while (!Serial)
     ; // Leonardo: wait for serial monitor
-  Serial.print("Setting up slave - acting as: ");
+  Serial.print("Setting up ARUINO-CODE - acting as: ");
 
   Wire.begin();
   Wire.beginTransmission(MPU);

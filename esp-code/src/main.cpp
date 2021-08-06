@@ -9,19 +9,6 @@
 // inclui biblioteca personalizada
 #include <SPI_Send_Receive.h>
 
-//flags de controle
-bool SCAN_LCD = false;
-bool IS_SLAVE = true;
-
-// functions
-void findLCDAddress(); // scan do endereço do LCD
-void masterSPI();
-void slaveSPI();
-void getMockData();
-
-// instanciar LCD
-LiquidCrystal_I2C lcd(0x20, 16, 2);
-
 // criar estrutura de transferência de dados por SPI
 struct GyroAccelData
 {
@@ -32,6 +19,20 @@ struct GyroAccelData
 };
 
 GyroAccelData gyroAccelData;
+
+//flags de controle
+bool SCAN_LCD = false;
+bool IS_SLAVE = true;
+
+// functions
+void findLCDAddress(); // scan do endereço do LCD
+void masterSPI();
+void slaveSPI();
+void slaveSPI(float data);
+void getMockData();
+
+// instanciar LCD
+LiquidCrystal_I2C lcd(0x20, 16, 2);
 
 volatile bool locked = false;
 volatile int bytes = 0;
@@ -44,11 +45,11 @@ void setup()
   while (!Serial)
     ; // Leonardo: wait for serial monitor
 
-  Serial.print("Setting up master  - acting as: ");
+  Serial.print("Setting up ESP-CODE  - acting as: ");
 
   lcd.init();      // Inicializando o LCD
   lcd.backlight(); // Ligando o BackLight do LCD
-
+  lcd.print("TESTE");
   if (!IS_SLAVE)
   {
     Serial.println("MASTER");
@@ -69,13 +70,11 @@ void setup()
 
 ISR(SPI_STC_vect) //Inerrrput routine function
 {
+  interruptions++;
   if (!locked)
   {
     locked = true;
-    interruptions++;
     bytes = SPI_read(gyroAccelData);
-    slaveSPI();
-    locked = false;
   }
 }
 
@@ -91,15 +90,41 @@ void loop()
     getMockData();
     masterSPI();
   }
+
+  if (locked)
+  {
+    Serial.print(bytes);
+    Serial.println(" bytes");
+    Serial.println(gyroAccelData.temperatura);
+    Serial.println(gyroAccelData.acelerometroX);
+    Serial.println(gyroAccelData.acelerometroY);
+    Serial.println(gyroAccelData.acelerometroZ);
+    Serial.println("interruptions:");
+    Serial.println(interruptions);
+    lcd.clear();
+    lcd.print(bytes);
+    lcd.setCursor(0, 1);
+    lcd.print(gyroAccelData.temperatura);
+    locked = false;
+  }
 }
 
 void slaveSPI()
 {
-  Serial.println("recebido:");
-  Serial.println(gyroAccelData.acelerometroX);
-  Serial.println(gyroAccelData.acelerometroY);
-  Serial.println(gyroAccelData.acelerometroZ);
-  Serial.println(gyroAccelData.temperatura);
+  Serial.print("recebido:");
+  // Serial.print(bytes);
+  // Serial.println(" bytes");
+  //Serial.println(gyroAccelData.temperatura);
+  // Serial.println("interruptions:");
+  // Serial.println(interruptions);
+}
+
+void slaveSPI(float data)
+{
+  Serial.print("recebido:");
+  Serial.print(bytes);
+  Serial.println(" bytes");
+  Serial.println(data);
   Serial.println("interruptions:");
   Serial.println(interruptions);
 }
