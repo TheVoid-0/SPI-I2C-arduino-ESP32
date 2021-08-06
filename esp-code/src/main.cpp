@@ -93,18 +93,7 @@ void loop()
 
   if (locked)
   {
-    Serial.print(bytes);
-    Serial.println(" bytes");
-    Serial.println(gyroAccelData.temperatura);
-    Serial.println(gyroAccelData.acelerometroX);
-    Serial.println(gyroAccelData.acelerometroY);
-    Serial.println(gyroAccelData.acelerometroZ);
-    Serial.println("interruptions:");
-    Serial.println(interruptions);
-    lcd.clear();
-    lcd.print(bytes);
-    lcd.setCursor(0, 1);
-    lcd.print(gyroAccelData.temperatura);
+    slaveSPI();
     locked = false;
   }
 }
@@ -112,11 +101,18 @@ void loop()
 void slaveSPI()
 {
   Serial.print("recebido:");
-  // Serial.print(bytes);
-  // Serial.println(" bytes");
-  //Serial.println(gyroAccelData.temperatura);
-  // Serial.println("interruptions:");
-  // Serial.println(interruptions);
+  Serial.print(bytes);
+  Serial.println(" bytes");
+  Serial.println(gyroAccelData.temperatura);
+  Serial.println(gyroAccelData.acelerometroX);
+  Serial.println(gyroAccelData.acelerometroY);
+  Serial.println(gyroAccelData.acelerometroZ);
+  Serial.println("interruptions:");
+  Serial.println(interruptions);
+  lcd.clear();
+  lcd.print(bytes);
+  lcd.setCursor(0, 1);
+  lcd.print(gyroAccelData.temperatura);
 }
 
 void slaveSPI(float data)

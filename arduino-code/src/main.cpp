@@ -79,8 +79,6 @@ ISR(SPI_STC_vect) //Inerrrput routine function
     locked = true;
     interruptions++;
     SPI_read(gyroAccelData);
-    slaveSPI();
-    locked = false;
   }
 }
 
@@ -115,6 +113,11 @@ void loop()
       Serial.println(timesSent);
       isFinished = true;
     }
+  }
+
+  if(locked) {
+    slaveSPI();
+    locked = false;
   }
 }
 
