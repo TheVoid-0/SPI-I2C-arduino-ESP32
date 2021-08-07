@@ -22,7 +22,7 @@ LiquidCrystal_I2C lcd(0x20, 16, 2);
 // flags de controle
 bool SCAN_I2C = false;
 const bool IS_SLAVE = false;
-const bool IS_SIMULATOR = true;
+const bool IS_SIMULATOR = false;
 //Endereco I2C do MPU6050 (giroscopio e acelerometro)
 const int MPU = 0x68;
 
@@ -91,7 +91,7 @@ void loop()
       findI2CAddress();
     }
 
-    if (timesSent < 20)
+    if (true)
     {
       if (!IS_SLAVE)
       {
@@ -115,7 +115,8 @@ void loop()
     }
   }
 
-  if(locked) {
+  if (locked)
+  {
     slaveSPI();
     locked = false;
   }
@@ -146,13 +147,13 @@ void getAccelerometerAndGyroscopeData()
   //Solicita os dados do sensor
   Wire.requestFrom(MPU, 14, true);
   //Armazena o valor dos sensores nas variaveis correspondentes
-  gyroAccelData.acelerometroX = Wire.read() << 8 | Wire.read(); //0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
-  gyroAccelData.acelerometroY = Wire.read() << 8 | Wire.read(); //0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
-  gyroAccelData.acelerometroZ = Wire.read() << 8 | Wire.read(); //0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
-  gyroAccelData.temperatura = Wire.read() << 8 | Wire.read();   //0x41 (TEMP_OUT_H) & 0x42 (TEMP_OUT_L)
-  gyroAccelData.giroscopioX = Wire.read() << 8 | Wire.read();   //0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
-  gyroAccelData.giroscopioY = Wire.read() << 8 | Wire.read();   //0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
-  gyroAccelData.giroscopioZ = Wire.read() << 8 | Wire.read();   //0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
+  gyroAccelData.acelerometroX = (Wire.read() << 8 | Wire.read()) / (16384 * 9.80); //0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
+  gyroAccelData.acelerometroY = (Wire.read() << 8 | Wire.read()) / (16384 * 9.80); //0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
+  gyroAccelData.acelerometroZ = (Wire.read() << 8 | Wire.read()) / (16384 * 9.80); //0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
+  gyroAccelData.temperatura = (Wire.read() << 8 | Wire.read()) / (16384 * 9.80);   //0x41 (TEMP_OUT_H) & 0x42 (TEMP_OUT_L)
+  gyroAccelData.giroscopioX = (Wire.read() << 8 | Wire.read()) / (16384 * 9.80);   //0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
+  gyroAccelData.giroscopioY = (Wire.read() << 8 | Wire.read()) / (16384 * 9.80);   //0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
+  gyroAccelData.giroscopioZ = (Wire.read() << 8 | Wire.read()) / (16384 * 9.80);   //0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
 
   gyroAccelData.temperatura = gyroAccelData.temperatura / 340.00 + 36.53;
 }
