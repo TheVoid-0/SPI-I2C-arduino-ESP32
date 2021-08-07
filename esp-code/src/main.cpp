@@ -20,6 +20,9 @@ struct GyroAccelData
 
 GyroAccelData gyroAccelData;
 
+GyroAccelData bufferGyroAccel;
+byte buffer[sizeof(bufferGyroAccel)];
+
 //flags de controle
 bool SCAN_LCD = false;
 bool IS_SLAVE = true;
@@ -32,7 +35,7 @@ void slaveSPI(float data);
 void getMockData();
 
 // instanciar LCD
-LiquidCrystal_I2C lcd(0x20, 16, 2);
+LiquidCrystal_I2C lcd(0x3F, 16, 2);
 
 volatile bool locked = false;
 volatile int bytes = 0;
@@ -41,6 +44,8 @@ volatile int interruptions = 0;
 void setup()
 {
 
+  pinMode(4, OUTPUT);
+  pinMode(3, OUTPUT);
   Serial.begin(9600);
   while (!Serial)
     ; // Leonardo: wait for serial monitor
@@ -70,11 +75,12 @@ void setup()
 
 ISR(SPI_STC_vect) //Inerrrput routine function
 {
+  //buffer = SPDR;
   interruptions++;
   if (!locked)
   {
     locked = true;
-    bytes = SPI_read(gyroAccelData);
+    bytes = SPI_read(gyroAccelData, SPDR);
   }
 }
 
@@ -109,10 +115,28 @@ void slaveSPI()
   Serial.println(gyroAccelData.acelerometroZ);
   Serial.println("interruptions:");
   Serial.println(interruptions);
-  lcd.clear();
-  lcd.print(bytes);
-  lcd.setCursor(0, 1);
-  lcd.print(gyroAccelData.temperatura);
+  if (gyroAccelData.giroscopioX != 0.00)
+  {
+    digitalWrite(4, HIGH);
+    digitalWrite(3, LOW);
+    lcd.clear();
+    lcd.print(gyroAccelData.temperatura);
+    lcd.print("Gx:");
+    lcd.print(gyroAccelData.giroscopioX);
+
+    lcd.setCursor(0, 1);
+
+    lcd.print("Gy: ");
+    lcd.print(gyroAccelData.giroscopioY);
+    lcd.print("Gz: ");
+    lcd.print(gyroAccelData.giroscopioZ);
+  }
+  else
+  {
+
+    digitalWrite(4, LOW);
+    digitalWrite(3, HIGH);
+  }
 }
 
 void slaveSPI(float data)

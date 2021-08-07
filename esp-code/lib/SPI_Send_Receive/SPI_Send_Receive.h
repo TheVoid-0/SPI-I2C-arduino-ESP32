@@ -21,14 +21,14 @@ unsigned int SPI_write(const T &value)
 //   }  // end of SPI_readAnything_ISR
 
 template <typename T>
-unsigned int SPI_read(T &output)
+unsigned int SPI_read(T &output, byte firstByte)
 {
   byte *p = (byte *)&output; // cast qualquer valor para um ponteiro do tipo byte
   unsigned int i;
 
-  //*p++ = firstByte;
+  *p++ = firstByte;
 
-  for (i = 0; i < sizeof(output); i++)
+  for (i = 1; i < sizeof(output); i++)
   {
     *p++ = SPI.transfer(0);
   }
